@@ -52,14 +52,23 @@ ScreenCaptureKit으로 Finder 창을 실시간 캡처해 보여줍니다.**
 
 AppleScript/Automation 권한은 필요 없습니다.
 
-### 재빌드할 때 권한이 풀리는 문제
+### 재빌드해도 권한이 유지되게 하기
 
-ad-hoc 서명은 빌드할 때마다 코드 해시가 바뀌어서 macOS가 권한을 잊어버립니다. 키체인 접근 ▸ 인증서 지원 ▸
-인증서 생성(유형: 코드 서명)으로 자체 서명 인증서(예: `FinderPin Dev`)를 만든 뒤 아래처럼 빌드하세요:
+macOS는 권한을 앱의 서명 요구사항에 묶습니다. ad-hoc 서명은 빌드할 때마다 코드 해시가 바뀌어서 권한이 풀립니다.
+처음 한 번 자체 서명 인증서를 만들어 두면, `build-app.sh`가 자동으로 그 인증서로 서명합니다.
 
 ```bash
-FINDERPIN_SIGN_ID="FinderPin Dev" ./scripts/build-app.sh
+./scripts/make-signing-cert.sh   # 로그인 키체인에 "FinderPin Self-Signed" 생성 (한 번만)
+./scripts/install.sh
 ```
+
+인증서는 시스템 전체에서 신뢰하도록 등록하지 않으며(관리자 암호 불필요), `codesign`만 사용할 수 있습니다.
+
+### 캡처 데이터
+
+캡처 화면은 디스크에 저장되지 않습니다. 메모리 버퍼 몇 개를 재사용하므로 오래 켜 두어도 늘어나지 않습니다
+(30초 측정: 디스크 기록 0KB, 메모리 약 21MB로 일정). 고정된 Finder 창이 화면에 없거나 기능을 끄면 캡처를 멈춥니다.
+캡처하는 동안에는 macOS가 메뉴바에 보라색 점(화면 기록 표시)을 띄웁니다.
 
 ## 알려진 제약
 

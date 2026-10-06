@@ -40,8 +40,12 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# Signing identity: set FINDERPIN_SIGN_ID to a stable (e.g. self-signed) certificate so
-# Accessibility / Screen Recording grants survive rebuilds. Ad-hoc ("-") changes the
-# code hash on every build, which makes macOS forget the grants.
-codesign --force --sign "${FINDERPIN_SIGN_ID:--}" --identifier local.finderpin "$APP"
+# Signing identity. macOS ties Accessibility / Screen Recording grants to the app's
+# designated requirement. Ad-hoc ("-") pins it to the code hash, which changes on every
+# build and makes macOS forget the grants; a stable certificate keeps them.
+# Default: the "FinderPin Self-Signed" identity if it is in the keychain
+# (see scripts/make-signing-cert.sh), otherwise ad-hoc. Override with FINDERPIN_SIGN_ID.
+SIGN_ID="${FINDERPIN_SIGN_ID:-$(security find-identity -p codesigning | awk '/"FinderPin Self-Signed"/{print $2; exit}')}"
+codesign --force --sign "${SIGN_ID:--}" --identifier local.finderpin "$APP"
+codesign -dr - "$APP" 2>&1 | tail -1
 echo "Built $APP"

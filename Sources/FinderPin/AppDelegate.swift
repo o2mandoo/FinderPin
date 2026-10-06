@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
+        installSignalHandlers()
         requestPermissionsIfNeeded()
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -78,6 +79,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         // Hand ⌥⌘Space back to macOS ("Show Finder search window").
         SymbolicHotKeys.setEnabled(SymbolicHotKeys.finderSearchWindow, true)
+    }
+
+    /// `kill`/`pkill` (SIGTERM) and Ctrl-C bypass applicationWillTerminate; route them
+    /// through a normal quit so ⌥⌘Space is always handed back.
+    private var signalSources: [DispatchSourceSignal] = []
+    private func installSignalHandlers() {
+        for sig in [SIGTERM, SIGINT, SIGHUP] {
+            signal(sig, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: sig, queue: .main)
+            source.setEventHandler { NSApp.terminate(nil) }
+            source.resume()
+            signalSources.append(source)
+        }
     }
 
     /// The tap needs Accessibility; retry until it is granted.
